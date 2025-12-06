@@ -1,0 +1,30 @@
+name: FP064_p3_islatransfers
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: BD_IslaTransfer_MySQL
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: wordpress2
+      MYSQL_USER: wordpress2
+      MYSQL_PASSWORD: IUEEPowL7knxVtGF
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      # PMA_USER: root
+      # PMA_PASSWORD: root
+      UPLOAD_LIMIT: 100M
+    depends_on:
+      - mysql
+
+volumes:
+  mysql-data:
