@@ -18,6 +18,8 @@ class ProfileController extends Controller
     {
         return view('profile.edit', [
             'user' => $request->user(),
+            'viajero' => $request->user()->viajero,
+            'hotel' => $request->user()->hotel,
         ]);
     }
 

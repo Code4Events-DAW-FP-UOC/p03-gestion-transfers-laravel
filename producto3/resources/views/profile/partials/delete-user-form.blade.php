@@ -6,8 +6,10 @@
         </p>
     </header>
     {{-- Botón que abre el modal de confiramción --}}
-    <x-danger-button type="button" data-bs-toggle="modal"
-        data-bs-target="#confirm-user-deletion-modal">{{ __('Eliminiar cuenta definitivamente') }}</x-danger-button>
+    <div class="d-flex justify-content-end align-items-center gap-3"><x-danger-button type="button" data-bs-toggle="modal"
+            data-bs-target="#confirm-user-deletion-modal">{{ __('Eliminiar cuenta definitivamente') }}</x-danger-button>
+    </div>
+
     {{-- Modal de confirmación usando el componente x-modal --}}
     <x-modal name="confirm-user-deletion-modal" :show="$errors->userDeletion->isNotEmpty()" focusable>
         <form method="post" action="{{ route('profile.destroy') }}">

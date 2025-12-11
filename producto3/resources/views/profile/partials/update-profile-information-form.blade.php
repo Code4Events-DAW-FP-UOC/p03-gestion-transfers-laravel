@@ -1,7 +1,8 @@
+{{-- resources/view/profile/partials/update-profile-information-form.blade.php --}}
 <section>
     <header>
         <h2 class="h5 mb-3">{{ __('Información de perfil') }}</h2>
-        <p class="text-muted small mb-4">{{ __('Actualiza el nombre y el correo electrónico asociados a tu cuenta.') }}
+        <p class="text-muted small mb-4">{{ __('Actualiza los datos asociados a tu cuenta de Isla Transfers.') }}
         </p>
     </header>
     {{-- Formulario "oculto" para reenviar verificación de email --}}
@@ -12,41 +13,18 @@
     <form method="post" action="{{ route('profile.update') }}">
         @csrf
         @method('patch')
-        {{-- Nombre --}}
-        <div class="mb-3">
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" name="name" type="text" class="mt-1 w-100" :value="old('name', $user->name)" required
-                autofocus autocomplete="name" />
-            <x-input-error class="mt-2" :messages="$errors->get('name')" />
-        </div>
-        {{--  Correo electrónico --}}
-        <div class="mb-3">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" name="email" type="email" class="mt-1 w-100" :value="old('email', $user->email)" required
-                autocomplete="username" />
-            <x-input-error class="mt-2" :messages="$errors->get('email')" />
-
-            @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && !$user->hasVerifiedEmail())
-                <div>
-                    <p class="small mb-2">
-                        {{ __('Tu dirección de correo electrónico no está verificada.') }}
-                        <button form="send-verification" type="submit" class="btn btn-link btn-sm p-0 align-baseline">
-                            {{ __('Haz clic aquí para reenviar el correo de verificación.') }}
-                        </button>
-                    </p>
-
-                    @if (session('status') === 'verification-link-sent')
-                        <p class="alert alert-succes py-2 mb-0">
-                            {{ __('Se ha enviado un nuevo enlace de verificación a tu correo electrónico.') }}
-                        </p>
-                    @endif
-                </div>
-            @endif
-        </div>
+        {{-- Datos cuenta --}}
+        @include('users._account_fields', ['user' => $user])
+        <hr class="my-4">
+        {{-- Datos viajero u hotel --}}
+        @if ($user->isHotel())
+            @include('hotel._fields', ['hotel' => $hotel, 'user' => $user])
+        @else
+            @include('viajero._fields', ['viajero' => $viajero, 'user' => $user])
+        @endif
         {{-- Botón guardar + mensaje "Guardado" --}}
-        <div class="d-flex items-center gap-3">
+        <div class="d-flex justify-content-end align-items-center gap-3">
             <x-primary-button>{{ __('Guardar cambios') }}</x-primary-button>
-
             @if (session('status') === 'profile-updated')
                 <p x-data="{ show: true }" x-show="show" x-transition x-init="setTimeout(() => show = false, 2000)"
                     class="samll text-muted mb-00">{{ __('Cambios guardados.') }}</p>

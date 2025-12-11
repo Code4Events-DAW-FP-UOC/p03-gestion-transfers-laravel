@@ -38,6 +38,7 @@ class RegisteredUserController extends Controller
             'codigo_postal' => ['required', 'string', 'max:20'],
             'ciudad'        => ['required', 'string', 'max:100'],
             'pais'          => ['required', 'string', 'max:100'],
+            'telefono'      => ['required', 'string', 'max:50'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:150', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
