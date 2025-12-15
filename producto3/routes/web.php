@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Hotel\HotelDashboardController;
 use App\Http\Controllers\Viajero\ViajeroDashboardController;
+use App\Http\Controllers\Viajero\ReservaController as ViajeroReservaController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -40,11 +41,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('viajero')->name('viajero.')->group(function () {
         Route::get('dashboard', [ViajeroDashboardController::class, 'index'])->name('dashboard');
+        // CRUD Viajero
+        Route::resource('reservas', ViajeroReservaController::class)->only(['index', 'create','store','show','edit','update','destroy']);
+
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
 });
 
 require __DIR__.'/auth.php';

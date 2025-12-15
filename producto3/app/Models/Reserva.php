@@ -5,7 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property Carbon|null $fecha_reserva
+ * @property Carbon|null $fecha_entrada
+ * @property Carbon|null $fecha_vuelo_salida
+ */
 class Reserva extends Model
 {
     use HasFactory;
@@ -39,6 +45,25 @@ class Reserva extends Model
         'estado',
         'observaciones',
     ];
+
+    protected $casts = [
+        'fecha_reserva'=> 'datetime',
+        'fecha_modificacion' => 'datetime',
+        'fecha_entrada'=> 'date',
+        'fecha_vuelo_salida'=> 'date',
+    ];
+
+    /**
+     * Genera un localizador único para la reserva.
+     */
+    public static function generarLocalizador(): string
+    {
+        do{
+            $code = strtoupper(substr(md5(uniqid('', true)), 0, 8));
+        } while (self::where('localizador', $code)->exists());
+
+        return $code;
+    }
 
     /* RELACIONES */
     
@@ -81,4 +106,41 @@ class Reserva extends Model
     {
         return $this->belongsTo(User::class, 'id_modificador');
     }
+
+    public function getCreadorLabelAttribute(): string
+    {
+        if (! $this->creador) {
+            return '-';
+        }
+
+        return match ($this->creador->rol) {
+            'viajero' => '',
+            'hotel'   => 'Hotel',
+            'admin'   => 'Administrador',
+            default   => ucfirst($this->creador->rol),
+        };
+    }
+
+    /**
+     * Importe total del traslado según tipo de reserva.
+     *
+     * - Solo ida  → 1 × tarifa
+     * - Solo vuelta → 1 × tarifa
+     * - Ida y vuelta → 2 × tarifa
+     */
+    public function getImporteAttribute(): ?float
+    {
+        if (! $this->precio) {
+            return null;
+        }
+
+        $factor = 1;
+
+        if (in_array($this->id_tipo_reserva, [3], true)) {
+            $factor = 2;
+        }
+
+        return (float) $this->precio->precio * $factor;
+    }
+
 }

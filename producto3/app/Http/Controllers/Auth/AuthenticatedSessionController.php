@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -25,6 +26,33 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
+
+        $user = $request->user();
+
+        // Usuario desactivado en tabla users
+        if (! $user->activo) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Tu cuenta está desactivada. Si quieres reactivarla, contacta con la administración.',
+            ]);
+        }
+
+        if ($user->isViajero() && $user->viajero && ! $user->viajero->activo) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Tu cuenta de viajero está desactivada. Contacta con la administración.',
+            ]);
+        }
+
+        if ($user->isHotel() && $user->hotel && ! $user->hotel->activo) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Tu cuenta de hotel está desactivada. Contacta con la administración.',
+            ]);
+        }
 
         $request->session()->regenerate();
 

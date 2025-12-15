@@ -108,7 +108,11 @@ class ProfileController extends Controller
                 $hotel->save();
             }
 
-            $user->delete();
+            if ($user->activo) {
+                $user->activo = false;
+                $user->save();
+            }
+
         });
 
         $request->session()->invalidate();

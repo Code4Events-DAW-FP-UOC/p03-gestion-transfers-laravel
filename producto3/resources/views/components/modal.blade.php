@@ -17,7 +17,7 @@
 
 @if ($show)
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             var modalEl = document.getElementById('{{ $modalId }}');
             if (!modalEl || typeof bootstrap === 'undefined') return;
             var modal = new bootstrap.Modal(modalEl);
