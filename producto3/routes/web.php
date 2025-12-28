@@ -1,6 +1,13 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminHotelController;
+use App\Http\Controllers\Admin\AdminPrecioController;
+use App\Http\Controllers\Admin\AdminReservaController;
+use App\Http\Controllers\Admin\AdminTiposReservaController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AdminVehiculoController;
+use App\Http\Controllers\Admin\AdminZonaController;
 use App\Http\Controllers\Hotel\HotelDashboardController;
 use App\Http\Controllers\Viajero\ViajeroDashboardController;
 use App\Http\Controllers\Viajero\ReservaController as ViajeroReservaController;
@@ -33,6 +40,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::resource('reservas', AdminReservaController::class);
+        Route::resource('users', AdminUserController::class)->except(['show']);
+        Route::resource('hoteles', AdminHotelController::class)->names('hoteles')->parameters(['hoteles' => 'hotel'])->except(['show']);
+        Route::resource('vehiculos', AdminVehiculoController::class)->except(['show']);
+        Route::resource('tiposReserva', AdminTiposReservaController::class)->except('show');
+        Route::resource('precios', AdminPrecioController::class)->except('show');
+        Route::resource('zonas', AdminZonaController::class)->except('show');
+
+        // reset password hotel
+        Route::post('hoteles/{hotel}/reset-password', [AdminHotelController::class, 'resetPassword'])->name('hoteles.reset-password');
+        // reset password usuario
+        Route::post('users/{user}/reset-password', [AdminUserController::class, 'resetPassword'])->name('users.reset-password');
     });
 
     Route::prefix('hotel')->name('hotel.')->group(function () {

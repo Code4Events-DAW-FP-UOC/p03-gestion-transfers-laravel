@@ -26,6 +26,7 @@
         <header>
             <nav class="navbar navbar-expand-md navbar-dark shadow-sm">
                 <div class="container">
+                    @include('layouts.partials.flash-messages')
                     <!-- Logo + nombre: siempre visible -->
                     <a class="navbar-brand d-flex align-items-center" href="{{ route('home') }}">
                         <x-application-logo class="me-2" style="height: 32px;" />

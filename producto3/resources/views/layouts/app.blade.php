@@ -1,3 +1,4 @@
+{{-- resources/views/layouts/app.blade.php --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
@@ -14,13 +15,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Bootstrap CSS por CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <!-- Bootstrap Icons por CDN -->    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
 
     <!-- CSS personalizado -->
     <link rel="stylesheet" href="{{ asset('assets/css/custom.css') }}">
-
 </head>
 
 <body class="bg-light">
@@ -35,6 +35,8 @@
         @endisset
         <main class="flex-grow-1 py-4">
             <div class="container">
+                {{-- Mensajes flash (status, error, validación) --}}
+                @include('layouts.partials.flash-messages')
                 {{ $slot }}
             </div>
         </main>
