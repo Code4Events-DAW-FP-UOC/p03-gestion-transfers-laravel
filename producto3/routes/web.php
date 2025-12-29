@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminComisionesController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminHotelController;
 use App\Http\Controllers\Admin\AdminPrecioController;
@@ -48,6 +49,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('tiposReserva', AdminTiposReservaController::class)->except('show');
         Route::resource('precios', AdminPrecioController::class)->except('show');
         Route::resource('zonas', AdminZonaController::class)->except('show');
+
+        Route::get('/comisiones', [AdminComisionesController::class, 'index'])->name('comisiones.index');
 
         // reset password hotel
         Route::post('hoteles/{hotel}/reset-password', [AdminHotelController::class, 'resetPassword'])->name('hoteles.reset-password');

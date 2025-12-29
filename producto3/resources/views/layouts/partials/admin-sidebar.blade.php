@@ -86,6 +86,15 @@
                     </a>
                 </li>
 
+                {{-- Comisiones --}}
+                <li class="nav-item mb-1">
+                    <a href="{{ route('admin.comisiones.index') }}"
+                    class="nav-link d-flex align-items-center {{ $isActive('admin.comisiones.*') }}">
+                        <i class="bi bi-receipt me-2"></i>
+                        <span>{{ __('Comisiones') }}</span>
+                    </a>
+                </li>
+
                 {{-- Zonas --}}
                 <li class="nav-item">
                     <a href="{{ route('admin.zonas.index') }}"
