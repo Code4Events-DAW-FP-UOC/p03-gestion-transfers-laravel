@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminVehiculoController;
 use App\Http\Controllers\Admin\AdminZonaController;
 use App\Http\Controllers\Hotel\HotelDashboardController;
+use App\Http\Controllers\Hotel\HotelReservaController;
 use App\Http\Controllers\Viajero\ViajeroDashboardController;
 use App\Http\Controllers\Viajero\ReservaController as ViajeroReservaController;
 use App\Http\Controllers\ProfileController;
@@ -56,6 +57,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('hotel')->name('hotel.')->group(function () {
         Route::get('dashboard', [HotelDashboardController::class, 'index'])->name('dashboard');
+
+        Route::resource('reservas', HotelReservaController::class)->except(['show']); 
     });
 
     Route::prefix('viajero')->name('viajero.')->group(function () {

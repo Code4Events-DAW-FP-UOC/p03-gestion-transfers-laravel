@@ -44,6 +44,8 @@ class Reserva extends Model
         'destino_vuelo_salida',
         'estado',
         'observaciones',
+        'comision_porcentaje',
+        'comision_importe',
     ];
 
     protected $casts = [

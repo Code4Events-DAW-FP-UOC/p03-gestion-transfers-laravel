@@ -50,6 +50,10 @@ return new class extends Migration
             $table->enum('estado', ['pendiente','confirmada','cancelada','realizada'])->default('pendiente');
             $table->text('observaciones')->nullable();
 
+            // Comisión
+            $table->decimal('comision_porcentaje',5,2)->default(0);
+            $table->decimal('comision_importe', 10, 2)->default(0);
+
             $table->timestamps();
 
             // Índices
