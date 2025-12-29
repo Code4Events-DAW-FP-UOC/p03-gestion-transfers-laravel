@@ -18,7 +18,7 @@ class HotelDashboardController extends Controller
 
         /** @var Hotel|null $hotel */
         $hotel = $user->hotel;
-        abort_unless($hotel, 403);
+        abort_unless($hotel !== null, 403);
 
         // --- Métricas generales de reservas del hotel ---
         $baseQuery = Reserva::where('id_hotel_destino', $hotel->id_hotel);

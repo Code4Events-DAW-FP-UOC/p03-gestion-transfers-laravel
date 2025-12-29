@@ -15,7 +15,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
         $this->call([
             ZonaSeeder::class,
             VehiculoSeeder::class,
@@ -26,10 +25,5 @@ class DatabaseSeeder extends Seeder
             PrecioSeeder::class,
             ReservaSeeder::class,
         ]);
-
-        // User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Zona;
 
@@ -62,7 +61,6 @@ class ZonaSeeder extends Seeder
         Zona::updateOrCreate(
             ['id_zona' => 6],
             [
-                'id_zona' => 6,
                 'descripcion'  => 'Zona Oeste',
                 'codigo' => 'WEST_ZONE',
                 'created_at' => now(),

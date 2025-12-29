@@ -115,8 +115,8 @@ class HotelReservaController extends Controller
         $tipoReserva = TiposReserva::findOrFail($data['id_tipo_reserva']);
         $codigo      = $tipoReserva->codigo;   // ej: solo_ida, solo_vuelta, ida_vuelta
 
-        $esIda    = in_array($codigo, ['ida', 'solo_ida', 'ida_vuelta'], true);
-        $esVuelta = in_array($codigo, ['vuelta', 'solo_vuelta', 'ida_vuelta'], true);
+        $esIda    = in_array($codigo, ['SOLO_IDA', 'IDA_VUELTA'], true);
+        $esVuelta = in_array($codigo, ['SOLO_VUELTA', 'IDA_VUELTA'], true);
 
         // 3. Comprobar capacidad del vehículo
         $vehiculo = Vehiculo::findOrFail($data['id_vehiculo']);
