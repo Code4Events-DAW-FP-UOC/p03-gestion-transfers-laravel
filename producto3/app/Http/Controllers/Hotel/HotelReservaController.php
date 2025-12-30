@@ -9,10 +9,13 @@ use App\Models\TiposReserva;
 use App\Models\Vehiculo;
 use App\Models\Viajero;
 use App\Models\Hotel;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class HotelReservaController extends Controller
@@ -79,105 +82,173 @@ class HotelReservaController extends Controller
             abort(403, 'No hay un hotel asociado a este usuario.');
         }
 
-        // 1. Validar datos
-        $data = $request->validate([
-            'id_viajero'           => [
-                'required',
-                'integer',
-                Rule::exists((new Viajero)->getTable(), 'id_viajero'),
+        // ¿Viajero existente o nuevo?
+        $viajeroModo      = $request->input('viajero_modo', 'existente');
+        $esNuevoViajero   = $viajeroModo === 'nuevo' || $request->input('id_viajero') === '__new';
+
+        // --- Reglas de validación base de la reserva ---
+        $rules = [
+            'viajero_modo' => ['nullable', Rule::in(['existente', 'nuevo'])],
+
+            // si es existente, requerimos id_viajero; si es nuevo, puede venir "__new"
+            'id_viajero' => [
+                $esNuevoViajero ? 'nullable' : 'required',
+                'string',
             ],
-            'id_tipo_reserva'      => [
+
+            'id_tipo_reserva' => [
                 'required',
                 'integer',
                 Rule::exists((new TiposReserva)->getTable(), 'id_tipo_reserva'),
             ],
-            'id_vehiculo'          => [
+            'id_vehiculo' => [
                 'required',
                 'integer',
                 Rule::exists((new Vehiculo)->getTable(), 'id_vehiculo'),
             ],
-            'num_viajeros'         => ['required', 'integer', 'min:1'],
+            'num_viajeros' => ['required', 'integer', 'min:1'],
 
             // Tramo ida
             'fecha_entrada'        => ['nullable', 'date', 'after_or_equal:today'],
-            'hora_vuelo_entrada'   => ['nullable', 'date_format:H:i'],
-            'origen_vuelo_entrada' => ['nullable', 'string', 'max:255'],
-            'destino_vuelo_entrada'=> ['nullable', 'string', 'max:255'],
+            'hora_entrada'         => ['nullable', 'date_format:H:i'],
+            'numero_vuelo_entrada' => ['nullable', 'string', 'max:50'],
+            'origen_vuelo_entrada' => ['nullable', 'string', 'max:100'],
 
             // Tramo vuelta
             'fecha_vuelo_salida'   => ['nullable', 'date', 'after_or_equal:fecha_entrada'],
             'hora_vuelo_salida'    => ['nullable', 'date_format:H:i'],
-            'origen_vuelo_salida'  => ['nullable', 'string', 'max:255'],
-            'destino_vuelo_salida' => ['nullable', 'string', 'max:255'],
-        ]);
+            'numero_vuelo_salida'  => ['nullable', 'string', 'max:50'],
+            'destino_vuelo_salida' => ['nullable', 'string', 'max:100'],
+        ];
 
-        // 2. Tipo de reserva -> define si hay ida y/o vuelta
-        $tipoReserva = TiposReserva::findOrFail($data['id_tipo_reserva']);
-        $codigo      = $tipoReserva->codigo;   // ej: solo_ida, solo_vuelta, ida_vuelta
-
-        $esIda    = in_array($codigo, ['SOLO_IDA', 'IDA_VUELTA'], true);
-        $esVuelta = in_array($codigo, ['SOLO_VUELTA', 'IDA_VUELTA'], true);
-
-        // 3. Comprobar capacidad del vehículo
-        $vehiculo = Vehiculo::findOrFail($data['id_vehiculo']);
-        if ($data['num_viajeros'] > $vehiculo->plazas) {
-            return back()
-                ->withErrors(['num_viajeros' => 'El vehículo no tiene plazas suficientes para el número de viajeros.'])
-                ->withInput();
+        // --- Reglas adicionales si se crea un NUEVO viajero ---
+        if ($esNuevoViajero) {
+            $rules = array_merge($rules, [
+                'nuevo_nombre'          => ['required', 'string', 'max:100'],
+                'nuevo_apellido1'       => ['required', 'string', 'max:100'],
+                'nuevo_apellido2'       => ['nullable', 'string', 'max:100'],
+                'nuevo_email'           => [
+                    'required',
+                    'email',
+                    'max:255',
+                    Rule::unique((new User)->getTable(), 'email'),
+                ],
+                'nuevo_telefono'        => ['nullable', 'string', 'max:50'],
+                'nuevo_direccion'       => ['nullable', 'string', 'max:255'],
+                'nuevo_codigo_postal'   => ['nullable', 'string', 'max:20'],
+                'nuevo_ciudad'          => ['nullable', 'string', 'max:100'],
+                'nuevo_pais'            => ['nullable', 'string', 'max:100'],
+            ]);
         }
 
-        // 4. Obtener precio base desde la tabla de precios (hotel + vehículo)
-        $precio = Precio::where('id_hotel', $hotel->id_hotel)
-            ->where('id_vehiculo', $vehiculo->id_vehiculo)
-            ->first();
+        $data = $request->validate($rules);
 
-        if (! $precio) {
-            return back()
-                ->withErrors(['id_vehiculo' => 'No hay una tarifa definida para este hotel y vehículo.'])
-                ->withInput();
-        }
+        return DB::transaction(function () use ($data, $esNuevoViajero, $hotel, $user) {
 
-        $importeBase = (float) $precio->precio;
+            // 1) Crear o localizar VIAJERO
+            if ($esNuevoViajero) {
 
-        // 5. Calcular comisión: porcentaje del hotel sobre el importe base
-        $porcentajeComision = (float) ($hotel->comision ?? 0); // ejemplo 10 (%)
-        $importeComision    = round($importeBase * ($porcentajeComision / 100), 2);
+                // Password por defecto para IslaTransfers
+                // (puedes poner en .env: ISLATRANSFERS_DEFAULT_PASSWORD=lo_que_uses)
+                $defaultPassword = env('ISLATRANSFERS_DEFAULT_PASSWORD', 'islatransfers');
 
-        // 6. Crear la reserva (NO usamos precio_total)
-        Reserva::create([
-            'localizador'        => Reserva::generarLocalizador(),
-            'id_viajero'         => $data['id_viajero'],
-            'id_creador'         => $user->id,
-            'id_tipo_reserva'    => $data['id_tipo_reserva'],
-            'id_precio'          => $precio->id_precio ?? null,
-            'fecha_reserva'      => now(),
-            'fecha_modificacion' => now(),
-            'id_hotel_destino'   => $hotel->id_hotel,
+                // Crear usuario con rol viajero
+                $nuevoUser = User::create([
+                    'name'              => trim($data['nuevo_nombre'].' '.$data['nuevo_apellido1']),
+                    'email'             => $data['nuevo_email'],
+                    'password'          => Hash::make($defaultPassword),
+                    'rol'               => 'viajero',
+                    'email_verified_at' => now(),   // opcional
+                ]);
 
-            'num_viajeros'       => $data['num_viajeros'],
-            'id_vehiculo'        => $vehiculo->id_vehiculo,
+                // Crear ficha de viajero asociada
+                $nuevoViajero = Viajero::create([
+                    'user_id'        => $nuevoUser->id,
+                    'nombre'         => $data['nuevo_nombre'],
+                    'apellido1'      => $data['nuevo_apellido1'],
+                    'apellido2'      => $data['nuevo_apellido2'] ?? '',
+                    'email'          => $data['nuevo_email'],
+                    'telefono'       => $data['nuevo_telefono'] ?? '',
+                    'direccion'      => $data['nuevo_direccion'] ?? '',
+                    'codigo_postal'  => $data['nuevo_codigo_postal'] ?? '',
+                    'ciudad'         => $data['nuevo_ciudad'] ?? '',
+                    'pais'           => $data['nuevo_pais'] ?? 'España',
+                ]);
 
-            // Tramo ida
-            'fecha_entrada'        => $esIda ? ($data['fecha_entrada'] ?? null) : null,
-            'hora_vuelo_entrada'   => $esIda ? ($data['hora_vuelo_entrada'] ?? null) : null,
-            'origen_vuelo_entrada' => $esIda ? ($data['origen_vuelo_entrada'] ?? null) : null,
-            'destino_vuelo_entrada'=> $esIda ? ($data['destino_vuelo_entrada'] ?? null) : null,
+                $idViajero = $nuevoViajero->id_viajero;
 
-            // Tramo vuelta
-            'fecha_vuelo_salida'   => $esVuelta ? ($data['fecha_vuelo_salida'] ?? null) : null,
-            'hora_vuelo_salida'    => $esVuelta ? ($data['hora_vuelo_salida'] ?? null) : null,
-            'origen_vuelo_salida'  => $esVuelta ? ($data['origen_vuelo_salida'] ?? null) : null,
-            'destino_vuelo_salida' => $esVuelta ? ($data['destino_vuelo_salida'] ?? null) : null,
+            } else {
+                // Viajero ya existente
+                $idViajero = (int) $data['id_viajero'];
+            }
 
-            // Estado inicial + importes (solo comisión)
-            'estado'              => 'pendiente',
-            'comision_porcentaje' => $porcentajeComision,
-            'comision_importe'    => $importeComision,
-        ]);
+            // 2) Tipo de reserva
+            $tipoReserva = TiposReserva::findOrFail($data['id_tipo_reserva']);
+            $codigo      = $tipoReserva->codigo;   // p.ej. SOLO_IDA, SOLO_VUELTA, IDA_VUELTA
 
-        return redirect()
-            ->route('hotel.reservas.index')
-            ->with('status', 'Reserva creada correctamente.');
+            $esIda    = in_array($codigo, ['SOLO_IDA', 'IDA_VUELTA'], true);
+            $esVuelta = in_array($codigo, ['SOLO_VUELTA', 'IDA_VUELTA'], true);
+
+            // 3) Capacidad del vehículo
+            $vehiculo = Vehiculo::findOrFail($data['id_vehiculo']);
+            if ($data['num_viajeros'] > $vehiculo->plazas) {
+                return back()
+                    ->withErrors(['num_viajeros' => 'El vehículo no tiene plazas suficientes para el número de viajeros.'])
+                    ->withInput();
+            }
+
+            // 4) Precio hotel + vehículo
+            $precio = Precio::where('id_hotel', $hotel->id_hotel)
+                ->where('id_vehiculo', $vehiculo->id_vehiculo)
+                ->first();
+
+            if (! $precio) {
+                return back()
+                    ->withErrors(['id_vehiculo' => 'No hay una tarifa definida para este hotel y vehículo.'])
+                    ->withInput();
+            }
+
+            $importeBase = (float) $precio->precio;
+
+            // 5) Comisión hotel
+            $porcentajeComision = (float) ($hotel->comision ?? 0);
+            $importeComision    = round($importeBase * ($porcentajeComision / 100), 2);
+
+            // 6) Crear la reserva
+            Reserva::create([
+                'localizador'        => Reserva::generarLocalizador(),
+                'id_viajero'         => $idViajero,
+                'id_creador'         => $user->id,
+                'id_tipo_reserva'    => $tipoReserva->id_tipo_reserva,
+                'id_precio'          => $precio->id_precio,
+                'fecha_reserva'      => now(),
+                'fecha_modificacion' => now(),
+                'id_hotel_destino'   => $hotel->id_hotel,
+
+                'num_viajeros'       => $data['num_viajeros'],
+                'id_vehiculo'        => $vehiculo->id_vehiculo,
+
+                // Tramo ida
+                'fecha_entrada'        => $esIda ? ($data['fecha_entrada'] ?? null) : null,
+                'hora_entrada'         => $esIda ? ($data['hora_entrada'] ?? null) : null,
+                'numero_vuelo_entrada' => $esIda ? ($data['numero_vuelo_entrada'] ?? null) : null,
+                'origen_vuelo_entrada' => $esIda ? ($data['origen_vuelo_entrada'] ?? null) : null,
+
+                // Tramo vuelta
+                'fecha_vuelo_salida'   => $esVuelta ? ($data['fecha_vuelo_salida'] ?? null) : null,
+                'hora_vuelo_salida'    => $esVuelta ? ($data['hora_vuelo_salida'] ?? null) : null,
+                'numero_vuelo_salida'  => $esVuelta ? ($data['numero_vuelo_salida'] ?? null) : null,
+                'destino_vuelo_salida' => $esVuelta ? ($data['destino_vuelo_salida'] ?? null) : null,
+
+                'estado'              => 'pendiente',
+                'comision_porcentaje' => $porcentajeComision,
+                'comision_importe'    => $importeComision,
+            ]);
+
+            return redirect()
+                ->route('hotel.reservas.index')
+                ->with('status', 'Reserva creada correctamente.');
+        });
     }
 
     /**
@@ -257,12 +328,12 @@ class HotelReservaController extends Controller
             'num_viajeros'         => ['required', 'integer', 'min:1'],
 
             'fecha_entrada'        => ['nullable', 'date'],
-            'hora_entrada'         => ['nullable'],
+            'hora_entrada'         => ['nullable', 'date_format:H:i'],
             'numero_vuelo_entrada' => ['nullable', 'string', 'max:50'],
             'origen_vuelo_entrada' => ['nullable', 'string', 'max:100'],
 
             'fecha_vuelo_salida'   => ['nullable', 'date'],
-            'hora_vuelo_salida'    => ['nullable'],
+            'hora_vuelo_salida'    => ['nullable', 'date_format:H:i'],
             'numero_vuelo_salida'  => ['nullable', 'string', 'max:50'],
             'destino_vuelo_salida' => ['nullable', 'string', 'max:100'],
         ]);
@@ -273,7 +344,7 @@ class HotelReservaController extends Controller
         $esIda    = in_array($tipo, [1, 3], true);
         $esVuelta = in_array($tipo, [2, 3], true);
 
-        // Validaciones de fechas (igual que en store, pero con Carbon)
+        // Validaciones de fechas
         if ($esIda && !empty($data['fecha_entrada']) && !empty($data['hora_entrada'])) {
             $momentoIda = Carbon::parse($data['fecha_entrada'] . ' ' . $data['hora_entrada']);
             if ($momentoIda->lt($ahora)) {
@@ -360,7 +431,7 @@ class HotelReservaController extends Controller
                 $reserva->destino_vuelo_salida = null;
             }
 
-            // Recalcular importe base y comisión (pero SIN guardar precio_total)
+            // Recalcular importe base y comisión (sin precio_total)
             $factor      = in_array($tipo, [3], true) ? 2 : 1;   // ida+vuelta => doble precio
             $importeBase = (float) $precio->precio * $factor;
 

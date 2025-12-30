@@ -12,8 +12,6 @@
         </div>
     </x-slot>
 
-    @include('layouts.partials.flash-messages')
-
     <div class="py-4">
         <div class="card shadow-sm">
             <div class="card-body">
@@ -102,20 +100,17 @@
                                             </button>
                                         @endif
 
-                                        {{-- Cancelar --}}
+                                        {{-- Cancelar -> abre modal --}}
                                         @if ($canDelete)
-                                            <form action="{{ route('hotel.reservas.destroy', $reserva) }}"
-                                                  method="POST"
-                                                  class="d-inline"
-                                                  onsubmit="return confirm('{{ __('¿Seguro que quieres cancelar esta reserva?') }}')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit"
-                                                        class="btn btn-sm btn-outline-danger"
-                                                        title="{{ __('Cancelar') }}">
-                                                    <i class="bi bi-x-circle"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    title="{{ __('Cancelar') }}"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#hotelCancelReservaModal"
+                                                    data-action="{{ route('hotel.reservas.destroy', $reserva) }}"
+                                                    data-localizador="{{ $reserva->localizador }}">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
                                         @else
                                             <button class="btn btn-sm btn-outline-secondary"
                                                     disabled
@@ -152,4 +147,70 @@
             </div>
         </div>
     </div>
+
+    {{-- Modal de confirmación de cancelación --}}
+    <div class="modal fade" id="hotelCancelReservaModal" tabindex="-1"
+         aria-labelledby="hotelCancelReservaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="hotelCancelReservaModalLabel">
+                        {{ __('Cancelar reserva') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="{{ __('Cerrar') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="hotelCancelReservaMessage">
+                        {{ __('¿Seguro que quieres cancelar esta reserva? Esta acción no se puede deshacer.') }}
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        {{ __('Cerrar') }}
+                    </button>
+
+                    <form id="hotelCancelReservaForm" action="#" method="POST" class="d-inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger">
+                            {{ __('Sí, cancelar reserva') }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const modalEl   = document.getElementById('hotelCancelReservaModal');
+                if (!modalEl) return;
+
+                const formEl    = document.getElementById('hotelCancelReservaForm');
+                const msgEl     = document.getElementById('hotelCancelReservaMessage');
+
+                modalEl.addEventListener('show.bs.modal', function (event) {
+                    const button = event.relatedTarget;
+                    if (!button) return;
+
+                    const action       = button.getAttribute('data-action');
+                    const localizador  = button.getAttribute('data-localizador');
+
+                    if (formEl && action) {
+                        formEl.setAttribute('action', action);
+                    }
+
+                    if (msgEl) {
+                        msgEl.textContent =
+                            `¿Seguro que quieres cancelar la reserva ${localizador}? ` +
+                            `Esta acción no se puede deshacer.`;
+                    }
+                });
+            });
+        </script>
+    @endpush
 </x-app-layout>
