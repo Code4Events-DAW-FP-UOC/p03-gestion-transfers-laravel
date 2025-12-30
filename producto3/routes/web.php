@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\ZonaController;
 use App\Http\Controllers\Admin\VehiculoController;
 use App\Http\Controllers\Admin\PrecioController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Api\EstadisticasController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -70,6 +71,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/reservas/por-zona', [EstadisticasController::class, 'reservasPorZona']);
 
 });
 
