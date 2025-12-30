@@ -331,7 +331,23 @@ class AdminReservaController extends Controller
      */
     public function destroy(Reserva $reserva)
     {
-        //
+        $user = Auth::user();
+        abort_unless($user && $user->isAdmin(), 403);
+
+        // No permitir cancelar si ya está realizada o cancelada
+        if (in_array($reserva->estado, ['realizada', 'cancelada'], true)) {
+            return redirect()
+                ->route('admin.reservas.index')
+                ->with('error', 'Esta reserva ya no se puede cancelar.');
+        }
+
+        $reserva->estado = 'cancelada';
+        $reserva->fecha_modificacion = now();
+        $reserva->save();
+
+        return redirect()
+            ->route('admin.reservas.index')
+            ->with('status', 'Reserva cancelada correctamente.');
     }
 
     /**
@@ -347,7 +363,8 @@ class AdminReservaController extends Controller
             'num_viajeros'     => ['required', 'integer', 'min:1'],
 
             'fecha_entrada'        => ['nullable', 'date'],
-            'hora_entrada'         => ['nullable', 'date_format:H:i'],
+            // Acepta  HH:MM  o  HH:MM:SS
+            'hora_entrada'         => ['nullable', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'],
             'numero_vuelo_entrada' => ['nullable', 'string', 'max:50'],
             'origen_vuelo_entrada' => ['nullable', 'string', 'max:100'],
 

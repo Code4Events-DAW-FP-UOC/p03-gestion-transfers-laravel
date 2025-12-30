@@ -157,7 +157,8 @@
                                         class="form-select @error('id_hotel') is-invalid @enderror">
                                         <option value="">{{ __('Selecciona un hotel') }}</option>
                                         @foreach ($hoteles as $hotel)
-                                            <option value="{{ $hotel->id_hotel }}" {{ (string) $idHotelValue === (string) $hotel->id_hotel ? 'selected' : '' }}>
+                                            <option value="{{ $hotel->id_hotel }}"
+                                                @selected(old('id_hotel', $reserva->id_hotel_destino) == $hotel->id_hotel)>
                                                 {{ $hotel->nombre }}
                                             </option>
                                         @endforeach
@@ -217,151 +218,149 @@
     </div>
     {{-- JS para mostrar/ocultar bloques y filtrar vehículos por plazas --}}
     @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const tipoSelect = document.getElementById('id_tipo_reserva');
-                const bloqueComun = document.getElementById('bloque-comun');
-                const bloqueIda = document.getElementById('bloque-ida');
-                const bloqueVuelta = document.getElementById('bloque-vuelta');
-                const bloqueSubmit = document.getElementById('bloque-submit');
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tipoSelect     = document.getElementById('id_tipo_reserva');
+            const bloqueComun    = document.getElementById('bloque-comun');
+            const bloqueIda      = document.getElementById('bloque-ida');
+            const bloqueVuelta   = document.getElementById('bloque-vuelta');
+            const bloqueSubmit   = document.getElementById('bloque-submit');
 
-                const numViajeros = document.getElementById('num_viajeros');
-                const vehiculoSelect = document.getElementById('id_vehiculo');
+            const numViajeros    = document.getElementById('num_viajeros');
+            const vehiculoSelect = document.getElementById('id_vehiculo');
 
-                const fechaIdaInput = document.getElementById('fecha_entrada');
-                const fechaVueltaInput = document.getElementById('fecha_vuelo_salida');
+            const fechaIdaInput     = document.getElementById('fecha_entrada');
+            const fechaVueltaInput  = document.getElementById('fecha_vuelo_salida');
 
-                // Mínimo visual: hoy + 2 días (lo define PHP arriba como $minDate)
-                const baseMin = '{{ $minDate }}';
+            // Hoy + 48h (mínimo visual) viene de PHP
+            const baseMin = '{{ $minDate }}';
 
-                // Mostrar / ocultar bloques según tipo de reserva
-                function toggleBloques() {
-                    const tipo = tipoSelect.value; // "1", "2", "3"...
+            // IDs de tipos según código en BD
+            const tipoSoloIda    = '{{ $tiposReserva->firstWhere("codigo", "SOLO_IDA")->id_tipo_reserva ?? "1" }}';
+            const tipoSoloVuelta = '{{ $tiposReserva->firstWhere("codigo", "SOLO_VUELTA")->id_tipo_reserva ?? "2" }}';
+            const tipoIdaVuelta  = '{{ $tiposReserva->firstWhere("codigo", "IDA_VUELTA")->id_tipo_reserva ?? "3" }}';
 
-                    // Ocultamos todo
-                    bloqueComun.classList.add('d-none');
-                    bloqueIda.classList.add('d-none');
-                    bloqueVuelta.classList.add('d-none');
-                    bloqueSubmit.classList.add('d-none');
+            /**
+             * Mostrar / ocultar bloques según el tipo de reserva
+             */
+            function toggleBloques() {
+                const tipo = tipoSelect.value;
 
-                    if (!tipo) {
-                        return;
-                    }
+                // Ocultar todo por defecto
+                bloqueComun.classList.add('d-none');
+                bloqueIda.classList.add('d-none');
+                bloqueVuelta.classList.add('d-none');
+                bloqueSubmit.classList.add('d-none');
 
-                    // Siempre que haya tipo seleccionado mostramos bloque común + botón
-                    bloqueComun.classList.remove('d-none');
-                    bloqueSubmit.classList.remove('d-none');
+                if (!tipo) {
+                    return;
+                }
 
+                // Siempre mostramos bloque común y botón cuando hay tipo
+                bloqueComun.classList.remove('d-none');
+                bloqueSubmit.classList.remove('d-none');
+
+                if (tipo === tipoSoloIda) {
                     // Solo ida
-                    if (tipo === '1') {
-                        bloqueIda.classList.remove('d-none');
-                    }
+                    bloqueIda.classList.remove('d-none');
+                } else if (tipo === tipoSoloVuelta) {
                     // Solo vuelta
-                    else if (tipo === '2') {
-                        bloqueVuelta.classList.remove('d-none');
-                    }
-                    // Ida y vuelta
-                    else if (tipo === '3') {
-                        bloqueIda.classList.remove('d-none');
-                        bloqueVuelta.classList.remove('d-none');
+                    bloqueVuelta.classList.remove('d-none');
+                } else if (tipo === tipoIdaVuelta) {
+                    // Ida + vuelta
+                    bloqueIda.classList.remove('d-none');
+                    bloqueVuelta.classList.remove('d-none');
+                }
+            }
+
+            /**
+             * Deshabilitar vehículos que no tengan plazas suficientes
+             */
+            function filtrarVehiculosPorPlazas() {
+                const n = parseInt(numViajeros.value || '0', 10);
+
+                Array.from(vehiculoSelect.options).forEach(option => {
+                    if (!option.value) return; // opción vacía
+
+                    const plazas = parseInt(option.dataset.plazas || '0', 10);
+                    option.disabled = (n > 0 && plazas < n);
+                });
+
+                // Si el vehículo seleccionado ya no es válido, limpiamos selección
+                if (vehiculoSelect.selectedOptions.length) {
+                    const opt = vehiculoSelect.selectedOptions[0];
+                    if (opt.disabled) {
+                        vehiculoSelect.value = '';
                     }
                 }
+            }
 
-                // Filtrar vehículos según nº de viajeros
-                function filtrarVehiculosPorPlazas() {
-                    const n = parseInt(numViajeros.value || '0', 10);
-
-                    Array.from(vehiculoSelect.options).forEach(option => {
-                        if (!option.value) return; // opción vacía
-
-                        const plazas = parseInt(option.dataset.plazas || '0', 10);
-                        option.disabled = (n > 0 && plazas < n);
-                    });
-
-                    // Si el vehículo seleccionado ya no es válido, limpiamos selección
-                    if (vehiculoSelect.selectedOptions.length) {
-                        const opt = vehiculoSelect.selectedOptions[0];
-                        if (opt.disabled) {
-                            vehiculoSelect.value = '';
-                        }
-                    }
-                }
-
-                // Reglas de mínimos para las fechas según tipo de reserva
-                function actualizarMinimos() {
-                    const tipo = tipoSelect.value; // "1", "2" o "3"
-
-                    // Siempre: la ida no puede ser antes de baseMin
-                    if (fechaIdaInput) {
-                        fechaIdaInput.min = baseMin;
-                    }
-
-                    if (!fechaVueltaInput) return;
-
-                    // --- SOLO IDA ---
-                    if (tipo === '{{ $tiposReserva->firstWhere("codigo", "IDA")->id_tipo_reserva ?? "1" }}') {
-                        fechaVueltaInput.min = baseMin;
-                        return;
-                    }
-
-                    // --- SOLO VUELTA ---
-                    if (tipo === '{{ $tiposReserva->firstWhere("codigo", "VUELTA")->id_tipo_reserva ?? "2" }}') {
-                        fechaVueltaInput.min = baseMin;
-
-                        if (fechaVueltaInput.value && fechaVueltaInput.value < baseMin) {
-                            fechaVueltaInput.value = '';
-                        }
-                        return;
-                    }
-
-                    // --- IDA + VUELTA ---
-                    if (tipo === '{{ $tiposReserva->firstWhere("codigo", "IDA_VUELTA")->id_tipo_reserva ?? "3" }}') {
-                        let minVuelta = baseMin;
-
-                        if (fechaIdaInput.value) {
-                            const idaDate = new Date(fechaIdaInput.value + 'T00:00:00');
-                            idaDate.setDate(idaDate.getDate() + 2);
-                            const idaPlusOne = idaDate.toISOString().slice(0, 10);
-
-                            // La vuelta no puede ser antes del día siguiente a la ida ni antes de baseMin (48h)
-                            if (idaPlusOne > minVuelta) {
-                                minVuelta = idaPlusOne;
-                            }
-                        }
-
-                        fechaVueltaInput.min = minVuelta;
-
-                        if (fechaVueltaInput.value && fechaVueltaInput.value < minVuelta) {
-                            fechaVueltaInput.value = '';
-                        }
-                        return;
-                    }
-
-                    // Caso por defecto
-                    fechaVueltaInput.min = baseMin;
-                }
-
-                // Eventos
-                if (tipoSelect) {
-                    tipoSelect.addEventListener('change', function () {
-                        toggleBloques();
-                        actualizarMinimos();
-                    });
-                }
+            /**
+             * Ajustar límites mínimos de fechas (solo visual)
+             * - Ida: no antes de baseMin (hoy + 48h)
+             * - Vuelta: según tipo:
+             *   - SOLO_VUELTA: min = baseMin
+             *   - IDA_VUELTA: min = max(baseMin, fecha_entrada)
+             *   - SOLO_IDA: min = baseMin (aunque no se muestre bloque de vuelta)
+             */
+            function actualizarMinimos() {
+                const tipo = tipoSelect.value;
 
                 if (fechaIdaInput) {
-                    fechaIdaInput.addEventListener('change', actualizarMinimos);
+                    fechaIdaInput.min = baseMin;
                 }
 
-                if (numViajeros) {
-                    numViajeros.addEventListener('input', filtrarVehiculosPorPlazas);
+                if (!fechaVueltaInput) {
+                    return;
                 }
 
-                // Estado inicial (por si viene de old())
-                toggleBloques();
-                filtrarVehiculosPorPlazas();
-                actualizarMinimos();
-            });
-        </script>
+                let minVuelta = baseMin;
+
+                // SOLO VUELTA
+                if (tipo === tipoSoloVuelta) {
+                    fechaVueltaInput.min = minVuelta;
+                    return;
+                }
+
+                // IDA + VUELTA
+                if (tipo === tipoIdaVuelta) {
+                    if (fechaIdaInput && fechaIdaInput.value) {
+                        // La vuelta no puede ser antes de la ida ni antes de baseMin
+                        if (fechaIdaInput.value > minVuelta) {
+                            minVuelta = fechaIdaInput.value;
+                        }
+                    }
+                    fechaVueltaInput.min = minVuelta;
+                    // Importante: NO vaciamos el valor aunque sea menor;
+                    // si algo no cumple las reglas, lo validará el backend.
+                    return;
+                }
+
+                // SOLO IDA u otro caso
+                fechaVueltaInput.min = minVuelta;
+            }
+
+            // Eventos
+            if (tipoSelect) {
+                tipoSelect.addEventListener('change', function () {
+                    toggleBloques();
+                    actualizarMinimos();
+                });
+            }
+
+            if (fechaIdaInput) {
+                fechaIdaInput.addEventListener('change', actualizarMinimos);
+            }
+
+            if (numViajeros) {
+                numViajeros.addEventListener('input', filtrarVehiculosPorPlazas);
+            }
+
+            // Estado inicial al cargar la página (edición o con old())
+            toggleBloques();
+            filtrarVehiculosPorPlazas();
+            actualizarMinimos();
+        });
+    </script>
     @endpush
 </x-app-layout>

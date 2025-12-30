@@ -2,7 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Hotel;
+use App\Models\Precio;
+use App\Models\TiposReserva;
+use App\Models\Vehiculo;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateViajeroReservaRequest extends FormRequest
 {
@@ -11,7 +16,7 @@ class UpdateViajeroReservaRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -21,14 +26,67 @@ class UpdateViajeroReservaRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'id_hotel_destino'  => ['required', 'integer', 'exists:p3_tansefer_hoteles,id_hotel'],
-            'id_vehiculo'       => ['required', 'integer', 'exists:p3_transfer_vehiculos,id_vehiculo'],
-            'id_tipo_reserva'   => ['required', 'integer', 'exists:p3_transfer_tipos_reserva,id_tipo_reserva'],
-            'id_precio'         => ['required', 'integer', 'exists:p3_transfer_precios,id_precio'],
-            'fecha_entrada'     => ['required', 'date', 'affter:now + 48 hours'],
-            'hora_entrada'      => ['nullable', 'date_format:H:i'],
-            'num_viajeros'      => ['required', 'integer', 'min:1'],
+        $tablaHoteles   = (new Hotel())->getTable();        // p3_transfer_hoteles
+        $tablaVehiculos = (new Vehiculo())->getTable();     // p3_transfer_vehiculos
+        $tablaTipos     = (new TiposReserva())->getTable(); // p3_transfer_tipos_reservas
+
+        // Misma lógica que en StoreViajeroReservaRequest:
+        $tipo = (int) $this->input('id_tipo_reserva');
+
+        // Reglas comunes
+        $rules = [
+            'id_tipo_reserva' => [
+                'required',
+                'integer',
+                Rule::exists($tablaTipos, 'id_tipo_reserva'),
+            ],
+            'id_hotel' => [
+                'required',
+                'integer',
+                Rule::exists($tablaHoteles, 'id_hotel'),
+            ],
+            'num_viajeros' => [
+                'required',
+                'integer',
+                'min:1',
+            ],
+            'id_vehiculo' => [
+                'required',
+                'integer',
+                Rule::exists($tablaVehiculos, 'id_vehiculo'),
+            ],
         ];
+
+        // ----- Campos de IDA (tipo 1 o 3) -----
+        if (in_array($tipo, [1, 3], true)) {
+            $rules = array_merge($rules, [
+                'fecha_entrada'        => ['required', 'date'],
+                'hora_entrada'         => ['required', 'date_format:H:i'],
+                'numero_vuelo_entrada' => ['required', 'string', 'max:50'],
+                'origen_vuelo_entrada' => ['required', 'string', 'max:100'],
+            ]);
+        } else {
+            $rules['fecha_entrada']        = ['nullable', 'date'];
+            $rules['hora_entrada']         = ['nullable', 'date_format:H:i'];
+            $rules['numero_vuelo_entrada'] = ['nullable', 'string', 'max:50'];
+            $rules['origen_vuelo_entrada'] = ['nullable', 'string', 'max:100'];
+        }
+
+        // ----- Campos de VUELTA (tipo 2 o 3) -----
+        if (in_array($tipo, [2, 3], true)) {
+            $rules = array_merge($rules, [
+                'fecha_vuelo_salida'   => ['required', 'date'],
+                'hora_vuelo_salida'    => ['required', 'date_format:H:i'],
+                'numero_vuelo_salida'  => ['required', 'string', 'max:50'],
+                'destino_vuelo_salida' => ['required', 'string', 'max:100'],
+            ]);
+        } else {
+            $rules['fecha_vuelo_salida']   = ['nullable', 'date'];
+            $rules['hora_vuelo_salida']    = ['nullable', 'date_format:H:i'];
+            $rules['numero_vuelo_salida']  = ['nullable', 'string', 'max:50'];
+            $rules['destino_vuelo_salida'] = ['nullable', 'string', 'max:100'];
+        }
+
+        return $rules;
     }
 }

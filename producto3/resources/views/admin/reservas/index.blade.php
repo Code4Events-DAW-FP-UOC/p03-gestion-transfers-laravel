@@ -8,7 +8,7 @@
             </h2>
             <a href="{{ route('admin.reservas.create') }}" class="btn btn-primary">
                 <i class="bi bi-plus-lg me-1"></i>
-                {{ __('Nuevo reserva') }}
+                {{ __('Nueva reserva') }}
             </a>
         </div>
     </x-slot>
@@ -21,7 +21,6 @@
                     <table class="table table-sm align-middle">
                         <thead>
                             <tr>
-                                {{-- Cabeceras genéricas, cambia según la entidad --}}
                                 <th>{{ __('Localizador') }}</th>
                                 <th>{{ __('Creada por') }}</th>
                                 <th>{{ __('Tipo de reserva') }}</th>
@@ -45,7 +44,8 @@
                                         'admin'   => __('IslaTransfers'),
                                         default   => __('Desconocido'),
                                     };
-                                    // Fecha(s) de servicio
+
+                                    // Fechas de servicio
                                     $fechaIda = $reserva->fecha_entrada
                                         ? $reserva->fecha_entrada->format('d/m/Y')
                                         : null;
@@ -53,21 +53,34 @@
                                     $fechaVuelta = $reserva->fecha_vuelo_salida
                                         ? $reserva->fecha_vuelo_salida->format('d/m/Y')
                                         : null;
-                                    // Estado + permisos de acciones
+
+                                    // Estado + permisos
                                     $estado = $reserva->estado;
 
                                     $canEdit   = in_array($estado, ['pendiente', 'confirmada'], true);
-                                    $canDelete = in_array($estado, ['pendiente'], true);
+                                    $canCancel = in_array($estado, ['pendiente', 'confirmada'], true);
+
+                                    $badgeClass = match ($estado) {
+                                        'pendiente'  => 'bg-warning text-dark',
+                                        'confirmada' => 'bg-primary',
+                                        'realizada'  => 'bg-success',
+                                        'cancelada'  => 'bg-secondary',
+                                        default      => 'bg-light text-dark',
+                                    };
                                 @endphp
                                 <tr>
                                     {{-- Localizador --}}
                                     <td><span class="fw-semibold">{{ $reserva->localizador }}</span></td>
+
                                     {{-- Creada por --}}
                                     <td>{{ $creadaPor }}</td>
+
                                     {{-- Tipo de reserva --}}
                                     <td>{{ $reserva->tipoReserva->descripcion ?? '—' }}</td>
+
                                     {{-- Hotel destino --}}
                                     <td>{{ $reserva->hotelDestino->nombre ?? '—' }}</td>
+
                                     {{-- Fecha servicio --}}
                                     <td>
                                         @if($fechaIda && $fechaVuelta)
@@ -87,40 +100,36 @@
                                             —
                                         @endif
                                     </td>
+
                                     {{-- Viajeros --}}
                                     <td>{{ $reserva->num_viajeros }}</td>
+
                                     {{-- Vehículo --}}
                                     <td>{{ $reserva->vehiculo->descripcion ?? '—' }}</td>
+
                                     {{-- Estado --}}
                                     <td>
-                                        @php
-                                            $badgeClass = match ($estado) {
-                                                'pendiente'  => 'bg-warning text-dark',
-                                                'confirmada' => 'bg-primary',
-                                                'realizada'  => 'bg-success',
-                                                'cancelada'  => 'bg-secondary',
-                                                default      => 'bg-light text-dark',
-                                            };
-                                        @endphp
-
                                         <span class="badge {{ $badgeClass }}">
                                             {{ ucfirst($estado) }}
                                         </span>
                                     </td>
+
                                     {{-- Acciones --}}
                                     <td class="text-end">
-                                        {{-- Ver detalles (siempre disponible) --}}
-                                        <a href="{{ route('admin.reservas.show', $reserva) }}"
-                                        class="btn btn-sm btn-outline-secondary me-1"
-                                        title="{{ __('Ver detalles') }}">
+                                        {{-- Ver detalles en modal --}}
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary me-1"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#adminReservaDetail-{{ $reserva->id_reserva }}"
+                                                title="{{ __('Ver detalles') }}">
                                             <i class="bi bi-eye"></i>
-                                        </a>
+                                        </button>
 
                                         {{-- Editar --}}
                                         @if ($canEdit)
                                             <a href="{{ route('admin.reservas.edit', $reserva) }}"
-                                            class="btn btn-sm btn-outline-primary me-1"
-                                            title="{{ __('Editar') }}">
+                                               class="btn btn-sm btn-outline-primary me-1"
+                                               title="{{ __('Editar') }}">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                         @else
@@ -130,31 +139,26 @@
                                             </button>
                                         @endif
 
-                                        {{-- Borrar / Cancelar --}}
-                                        @if ($canDelete)
-                                            <form action="{{ route('admin.reservas.destroy', $reserva) }}"
-                                                method="POST"
-                                                class="d-inline"
-                                                onsubmit="return confirm('{{ __('¿Seguro que quieres eliminar esta reserva?') }}')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit"
-                                                        class="btn btn-sm btn-outline-danger"
-                                                        title="{{ __('Eliminar') }}">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+                                        {{-- Cancelar (modal de confirmación) --}}
+                                        @if ($canCancel)
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#adminReservaCancel-{{ $reserva->id_reserva }}"
+                                                    title="{{ __('Cancelar reserva') }}">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
                                         @else
                                             <button class="btn btn-sm btn-outline-secondary" disabled
-                                                    title="{{ __('No se puede eliminar en este estado') }}">
-                                                <i class="bi bi-trash"></i>
+                                                    title="{{ __('No se puede cancelar en este estado') }}">
+                                                <i class="bi bi-x-circle"></i>
                                             </button>
                                         @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">
+                                    <td colspan="9" class="text-center text-muted py-4">
                                         {{ __('No hay registros para mostrar.') }}
                                     </td>
                                 </tr>
@@ -178,4 +182,47 @@
             </div>
         </div>
     </div>
+
+    {{-- Modales de detalle + cancelación --}}
+    @foreach($reservas as $reserva)
+        {{-- Detalle --}}
+        <x-ui.modal
+            :id="'adminReservaDetail-' . $reserva->id_reserva"
+            :title="__('Detalle de reserva :loc', ['loc' => $reserva->localizador])"
+            size="lg"
+        >
+            @include('admin.reservas.partials.detail', ['reserva' => $reserva])
+        </x-ui.modal>
+
+        {{-- Confirmación de cancelación --}}
+        <x-ui.modal
+            :id="'adminReservaCancel-' . $reserva->id_reserva"
+            :title="__('Cancelar reserva :loc', ['loc' => $reserva->localizador])"
+            size="sm"
+        >
+            <p class="mb-3">
+                {{ __('¿Seguro que quieres cancelar la reserva ":loc"? Esta acción no eliminará el registro, pero cambiará su estado a "cancelada".', [
+                    'loc' => $reserva->localizador,
+                ]) }}
+            </p>
+
+            <x-slot name="footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    {{ __('Cerrar') }}
+                </button>
+
+                <form action="{{ route('admin.reservas.destroy', $reserva) }}"
+                      method="POST"
+                      class="d-inline">
+                    @csrf
+                    @method('DELETE')
+
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle me-1"></i>
+                        {{ __('Cancelar reserva') }}
+                    </button>
+                </form>
+            </x-slot>
+        </x-ui.modal>
+    @endforeach
 </x-admin-layout>

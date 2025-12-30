@@ -7,12 +7,6 @@
     <div class="mb-3 d-flex justify-content-end">
         <a href="{{ route('viajero.reservas.create') }}" class="btn btn-primary">Nueva reserva</a>
     </div>
-    @if (session('status'))
-        <div class="alert alert-success">{{ session('status') }}</div>
-    @endif
-    @if (session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
     <div class="car shadow-sm">
         <div class="card-body p-0">
             <table class="table mb-0">

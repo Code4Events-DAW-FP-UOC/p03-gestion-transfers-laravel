@@ -100,7 +100,7 @@
     <div class="col-12 col-md-3">
         <label for="estado" class="form-label">{{ __('Estado') }}</label>
         <select name="estado" id="estado" class="form-select">
-            @foreach(['pendiente','confirmada','realizada','cancelada'] as $estado)
+            @foreach(['pendiente','confirmada'] as $estado)
                 <option value="{{ $estado }}" @selected($oldEstado === $estado)>
                     {{ ucfirst($estado) }}
                 </option>

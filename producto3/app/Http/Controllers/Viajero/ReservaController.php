@@ -362,20 +362,47 @@ class ReservaController extends Controller
         $user = Auth::user();
         abort_unless($user->isViajero(), 403);
 
-        abort_unless($reserva->id_viajero === $user->viajero->id_viajero, 403);
+        $viajero = $user->viajero;
+        abort_unless($viajero && $reserva->id_viajero === $viajero->id_viajero, 403);
 
-        if ($reserva->fecha_entrada->diffInHours(now()) < 48) {
-            return redirect()->route('viajero.reservas.index')->with('error', 'No puedes cancelar una reserva con menos de 48 horas de antelación.');
+        // No permitir cancelar si ya está cancelada o realizada
+        if (in_array($reserva->estado, ['cancelada', 'realizada'], true)) {
+            return redirect()
+                ->route('viajero.reservas.index')
+                ->with('error', 'Esta reserva ya no se puede cancelar.');
         }
 
+        // --- Regla 48h para cancelar ---
+        $momentoReferencia = null;
+
+        if ($reserva->fecha_entrada && $reserva->hora_entrada) {
+            // Tramo ida
+            $momentoReferencia = Carbon::parse(
+                $reserva->fecha_entrada->format('Y-m-d') . ' ' . $reserva->hora_entrada
+            );
+        } elseif ($reserva->fecha_vuelo_salida && $reserva->hora_vuelo_salida) {
+            // Si no hay ida, usamos la vuelta
+            $momentoReferencia = Carbon::parse(
+                $reserva->fecha_vuelo_salida->format('Y-m-d') . ' ' . $reserva->hora_vuelo_salida
+            );
+        }
+
+        if ($momentoReferencia && now()->diffInHours($momentoReferencia, false) < 48) {
+            return redirect()
+                ->route('viajero.reservas.index')
+                ->with('error', 'No puedes cancelar una reserva con menos de 48 horas de antelación.');
+        }
+
+        // Marcar como cancelada en lugar de borrar
         DB::transaction(function () use ($reserva, $user) {
-        // En lugar de borrar la fila, marcamos como cancelada
-            $reserva->estado = 'cancelada';
+            $reserva->estado             = 'cancelada';
             $reserva->fecha_modificacion = now();
-            $reserva->id_modificador = $user->id;
+            $reserva->id_modificador     = $user->id;
             $reserva->save();
-         });
-         
-        return redirect()->route('viajero.reservas.index')->with('status', 'Rerserva cancelada correctamente.');
-    }
+        });
+
+        return redirect()
+            ->route('viajero.reservas.index')
+            ->with('status', 'Reserva cancelada correctamente.');
+        }
 }
