@@ -1,0 +1,196 @@
+/* ============================
+   PALETA ISLA TRANSFERS
+   ============================ */
+
+:root {
+    --color-principal: #00b7c2; /* turquesa botçon principal / acentos */
+    --color-principal-dark: #0097a7;
+    --color-header: #0a2540; /* azul oscuro: títulos / navbar */
+    --color-texto: #333333; /* texto general */
+    --color-bg: #ffffff; /* fondo pincipal */
+    --color-bg-soft: #f5f7fb; /* secciones suaves */
+    --color-acento: #ffb81c; /* amarillo sol */
+    --color-gris: #6b7280;
+}
+
+/* ============================
+   BASE
+   ============================ */
+
+body {
+    font-family: "Montserrat", system-ui, -apple-system, BlinkMacSystemFont,
+        sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-texto);
+}
+
+/* ============================
+   NAVBAR
+   ============================ */
+
+.navbar {
+    background-color: var(--color-header) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: #ffffff !important;
+    letter-spacing: 0.06em;
+}
+
+.navbar-brand img,
+.navbar-brand svg {
+    height: 32px;
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link.active {
+    color: var(--color-acento) !important;
+}
+
+/* === Hamburguesa navbar === */
+/* .navbar-toggler {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.navbar-toggler-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255,255,255,0.9)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 1.5rem 1.5rem;
+} */
+
+/* ============================
+   BOTONES
+   ============================ */
+
+/* Principal */
+.btn-primary,
+.btn-primary:visited {
+    background-color: var(--color-principal) !important;
+    border-color: var(--color-principal) !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    border-radius: 0.5rem;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+btn-primary:active {
+    background-color: var(--color-principal-dark) !important;
+    background-color: var(--color-principal-dark);
+}
+
+/* Secundario */
+.btn-secondary,
+.btn-secondary:visited {
+    background-color: var(--color-header) !important;
+    border-color: var(--color-header) !important;
+    color: #ffffff !important;
+    border-radius: 0.5rem;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus,
+.btn-secondary:active {
+    filter: brightness(1.1);
+}
+
+/* Outline princiapl */
+.btn-outline-primary,
+.btn-outline.primary:visited {
+    color: var(--color-principal) !important;
+    border-color: var(--color-principal) !important;
+    border-radius: 0.5rem;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary:active {
+    background-color: var(--color-principal) !important;
+    color: #ffffff !important;
+}
+
+/* Links */
+.btn-link {
+    color: var(--color-principal);
+    text-decoration: none;
+}
+
+.btn-link:hover {
+    color: var(--color-principal-dark);
+    text-decoration: underline;
+}
+
+/* ============================
+   TIPOGRAFICA ENCABEZADOS
+   ============================ */
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+    font-family: "Montserrat", system-ui, -apple-system, BlinkMacSystemFont,
+        sans-serif;
+    color: var(--color-header);
+    font-weight: 700;
+}
+
+.lead {
+    color: #4b5563;
+}
+
+/* ============================
+   TARJETAS / SECCIONES
+   ============================ */
+
+.card {
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+}
+
+.section-soft {
+    background-color: var(--color-bg-soft);
+}
+
+/* ============================
+   FORMULARIOS
+   ============================ */
+
+.form-control,
+.form-select {
+    border-radius: 0.5rem;
+    border-color: #d1d5db;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--color-principal);
+    box-shadow: 0 0 0 0.2rem rgba(0, 183, 194, 0.25);
+}
+
+/* Etiquetas y mensajes de error */
+.form-label {
+    font-weight: 500;
+    color: var(--color-header);
+}
+
+.invalid-feedback {
+    font-size: 0.85rem;
+}
+
+/* ============================
+   FOOTER
+   ============================ */
+footer.footer {
+    background-color: #f3f4f6;
+    color: #6b7280;
+    font-size: 0.9rem;
+    border-top: 1px solid #e5e7eb;
+    padding: 1.2rem 0;
+}

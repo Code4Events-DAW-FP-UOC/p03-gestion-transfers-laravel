@@ -1,0 +1,58 @@
+name: FP064_P3_IslaTransfers
+
+services:
+  web:
+    # image: php:8.2-apache
+    build: .
+    container_name: islatransfers_web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./producto3:/var/www/html/
+      #- ./core:/var/www/core
+      #- ./app:/var/www/app
+      #- ./config:/var/www/config
+      - ./.docker/apache/default.conf:/etc/apache2/sites-enabled/000-default.conf
+    depends_on:
+      db:
+        condition: service_started
+    networks: [islatransfers_net]
+
+  db:
+    image: mysql:8.0
+    container_name: islatransfers_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: islatransfers_p3
+      MYSQL_USER: islatransfers_p3
+      MYSQL_PASSWORD: islatransfers_p3
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      #- ./producto3/database/01-UOC_transfers-BD_Code4Events.sql:/docker-entrypoint-initdb.d//UOC_transfers-BD_Code4Events.sql:ro
+      #- ./producto3/database/02-UOC_transfers_datos_muestra.sql:/docker-entrypoint-initdb.d//UOC_transfers_datos_muestra.sql:ro
+
+    networks: [islatransfers_net]
+
+
+ 
+  
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: islatransfers_pma
+    environment:
+      PMA_HOST: db
+      PMA_USER: islatransfers_p3
+      PMA_PASSWORD: islatransfers_p3
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+    networks: [islatransfers_net]
+
+networks:
+  islatransfers_net:
+
+volumes:
+  db_data:
